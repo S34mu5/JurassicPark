@@ -186,7 +186,7 @@ public class AppController {
 
         Date fechaVisita = InputValidator.convertirAFecha(fechaStr);
         reservaActual = reservaServicio.crearReserva(clienteSeleccionado, fechaVisita);
-        clienteActual = clienteSeleccionado; // Actualizamos el cliente actual
+        clienteActual = clienteSeleccionado;
         vista.mostrarMensaje("Reserva creada: #" + reservaActual.getId()
                 + " para cliente: " + clienteSeleccionado.getNombreCompleto()
                 + " en fecha: " + fechaVisita);

@@ -35,7 +35,6 @@ public class FacturaServicio {
      * @return Factura generada
      */
     public Factura generarFactura(int id, Reserva reserva, double total) {
-        // Actualizamos el contador si el ID proporcionado es mayor
         if (id > contadorFacturas) {
             contadorFacturas = id;
         }
