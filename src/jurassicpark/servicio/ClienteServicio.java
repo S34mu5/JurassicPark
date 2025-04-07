@@ -41,7 +41,9 @@ public class ClienteServicio {
 
         } catch (Exception e) {
             System.out.println("Error al actualizar contador de clientes: " + e.getMessage());
+            e.printStackTrace();
         }
+        
     }
 
     /**

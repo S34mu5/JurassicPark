@@ -80,7 +80,7 @@ public class ClienteDAOMySQL implements IClienteDAO {
 
             while (rs.next()) {
                 Cliente cliente = new Cliente(
-                        rs.getInt("id"),
+                        rs.getInt("idcliente"),
                         rs.getString("nombre"),
                         rs.getString("apellido"),
                         rs.getString("email"),
