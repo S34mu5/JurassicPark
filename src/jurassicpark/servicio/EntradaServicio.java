@@ -51,7 +51,6 @@ public class EntradaServicio {
         for (int i = 0; i < cantidad; i++) {
             int entradaId = idInicial + i;
 
-            // Actualizamos el contador si el ID generado es mayor
             if (entradaId > contadorEntradas) {
                 contadorEntradas = entradaId;
             }

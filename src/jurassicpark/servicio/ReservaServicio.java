@@ -51,7 +51,6 @@ public class ReservaServicio {
      * @return Reserva creada
      */
     public Reserva crearReserva(int id, Cliente cliente, Date fechaVisita) {
-        // Actualizamos el contador si el ID proporcionado es mayor
         if (id > contadorReservas) {
             contadorReservas = id;
         }
