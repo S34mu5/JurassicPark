@@ -28,17 +28,24 @@ public class ClienteDAOMySQL implements IClienteDAO {
     public Cliente guardar(Cliente cliente) throws Exception {
         Connection conn = null;
         PreparedStatement stmt = null;
-        ResultSet generatedKeys = null;
+        // Comentado para probar si funciona sin generatedKeys
+        // ResultSet generatedKeys = null;
 
         try {
             conn = connectionJP.getConnection();
 
             // INSERT nuevo (sin idcliente, ya que es AUTO_INCREMENT)
             String insertSql = "INSERT INTO cliente (nombre, apellido, email, telefono) VALUES (?, ?, ?, ?)";
-            //Esto es clave. Le indico a JDBC que, tras ejecutar la instrucción, 
-            // me devuelva cualquier columna con valor generado automáticamente 
-            //(la clave primaria auto‐incremental que antes generaba desde Java y cuya creación delego ahora en MySQL).
-            stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+            // Esto es clave. Le indico a JDBC que, tras ejecutar la instrucción,
+            // me devuelva cualquier columna con valor generado automáticamente
+            // (la clave primaria auto‐incremental que antes generaba desde Java y cuya
+            // creación delego ahora en MySQL).
+
+            // Comentado para probar si funciona sin generatedKeys
+            // stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+
+            // Versión sin retorno de claves generadas
+            stmt = conn.prepareStatement(insertSql);
 
             stmt.setString(1, cliente.getNombre());
             stmt.setString(2, cliente.getApellido());
@@ -47,31 +54,22 @@ public class ClienteDAOMySQL implements IClienteDAO {
 
             stmt.executeUpdate();
 
-            // Obtener el id generado por la BDD ya que es auto incremental
-            generatedKeys = stmt.getGeneratedKeys();
-            if (generatedKeys.next()) {
-                cliente.setId(generatedKeys.getInt(1));//Funciona porque la única generatedKey de cliente es un entero AI.
-            }
+         
 
             return cliente;
         } finally {
-            if (generatedKeys != null) {
-                try {
-                    generatedKeys.close();
-                } catch (SQLException e) {
-                   }
-            }
+         
             if (stmt != null) {
                 try {
                     stmt.close();
                 } catch (SQLException e) {
-                    }
+                }
             }
             if (conn != null) {
                 try {
                     conn.close();
                 } catch (SQLException e) {
-                    }
+                }
             }
         }
     }
