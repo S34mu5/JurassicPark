@@ -18,8 +18,6 @@ public class Reserva {
     private Date fechaVisita;
     private EstadoReserva estado;
     private List<Entrada> entradas;
-    private Pago pago;
-    private Factura factura;
 
     /**
      * Constructor de la clase Reserva
@@ -74,22 +72,6 @@ public class Reserva {
         if (!entradas.contains(entrada)) {
             entradas.add(entrada);
         }
-    }
-
-    public Pago getPago() {
-        return pago;
-    }
-
-    public void setPago(Pago pago) {
-        this.pago = pago;
-    }
-
-    public Factura getFactura() {
-        return factura;
-    }
-
-    public void setFactura(Factura factura) {
-        this.factura = factura;
     }
 
     @Override

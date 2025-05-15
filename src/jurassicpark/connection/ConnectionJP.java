@@ -26,15 +26,13 @@ public class ConnectionJP {
 
         // Parámetros de conexión
         String HOST = "localhost";
-        String PORT = "3310"; // 
+        String PORT = "3310"; //
         String DATABASE = "jp_db";
         String USER = "root";
         String PASSWORD = "root";
 
-      
         String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE + "?useUnicode=true&characterEncoding=utf-8";
 
-      
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }
