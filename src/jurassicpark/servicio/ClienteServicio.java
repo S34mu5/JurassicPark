@@ -31,7 +31,8 @@ public class ClienteServicio {
      * @return Cliente creado
      */
     public Cliente crearCliente(String nombre, String apellido, String email, String telefono) {
-        // Creamos cliente sin ID, el ID será asignado por la base de datos. Indicado por Pedro.
+        // Creamos cliente sin ID, el ID será asignado por la base de datos. Indicado
+        // por Pedro.
         Cliente cliente = new Cliente(0, nombre, apellido, email, telefono);
 
         try {
@@ -53,20 +54,24 @@ public class ClienteServicio {
      * @param email    Email del cliente
      * @param telefono Telefono del cliente
      * @return Cliente creado
+     * 
+     *         public Cliente crearCliente(int id, String nombre, String apellido,
+     *         String email, String telefono) {
+     *         // Nota: El ID proporcionado será ignorado por la base de datos si
+     *         usa
+     *         // AUTO_INCREMENT
+     *         Cliente cliente = new Cliente(id, nombre, apellido, email, telefono);
+     * 
+     *         try {
+     *         // Guardar en la base de datos
+     *         return clienteDAO.guardar(cliente);
+     *         } catch (Exception e) {
+     *         System.out.println("Error al guardar cliente en BD: " +
+     *         e.getMessage());
+     *         return cliente;
+     *         }
+     *         }
      */
-    public Cliente crearCliente(int id, String nombre, String apellido, String email, String telefono) {
-        // Nota: El ID proporcionado será ignorado por la base de datos si usa
-        // AUTO_INCREMENT
-        Cliente cliente = new Cliente(id, nombre, apellido, email, telefono);
-
-        try {
-            // Guardar en la base de datos
-            return clienteDAO.guardar(cliente);
-        } catch (Exception e) {
-            System.out.println("Error al guardar cliente en BD: " + e.getMessage());
-            return cliente;
-        }
-    }
 
     /**
      * Obtiene todos los clientes disponibles
