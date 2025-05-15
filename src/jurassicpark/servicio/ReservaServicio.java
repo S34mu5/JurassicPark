@@ -1,8 +1,9 @@
 package jurassicpark.servicio;
 
+import jurassicpark.dao.IReservaDAO;
+import jurassicpark.dao.ReservaDAOMySQL;
 import jurassicpark.modelo.gestion.Cliente;
 import jurassicpark.modelo.gestion.Reserva;
-import jurassicpark.modelo.gestion.Pago;
 import jurassicpark.modelo.gestion.Entrada;
 import jurassicpark.modelo.gestion.Visitante;
 
@@ -17,15 +18,38 @@ import java.text.ParseException;
  */
 public class ReservaServicio {
 
-    public ReservaServicio() {
-
-    }
+    // DAO para acceso a datos
+    private IReservaDAO reservaDAO;
 
     // Contador para generar IDs automáticamente
     private static int contadorReservas = 1000; // Empezamos desde 1000
 
-    // Lista para almacenar todas las reservas
-    private List<Reserva> reservas = new ArrayList<>();
+    /**
+     * Constructor de la clase ReservaServicio
+     */
+    public ReservaServicio() {
+        // Inicializar el DAO
+        this.reservaDAO = new ReservaDAOMySQL();
+        actualizarContador();
+    }
+
+    /**
+     * Actualiza el contador de IDs
+     */
+    private void actualizarContador() {
+        try {
+            // Obtener todas las reservas y actualizar contador si es necesario
+            List<Reserva> reservas = reservaDAO.buscarTodas();
+            for (Reserva reserva : reservas) {
+                if (reserva.getId() > contadorReservas) {
+                    contadorReservas = reserva.getId();
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al actualizar contador de reservas: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Crea una nueva reserva con ID generado automáticamente
@@ -35,10 +59,18 @@ public class ReservaServicio {
      * @return Reserva creada
      */
     public Reserva crearReserva(Cliente cliente, Date fechaVisita) {
+        actualizarContador();
+
         int id = ++contadorReservas; // Incrementamos el contador y asignamos el nuevo ID
         Reserva reserva = new Reserva(id, cliente, fechaVisita);
-        reservas.add(reserva);
-        return reserva;
+
+        try {
+            // Guardar en la base de datos
+            return reservaDAO.guardar(reserva);
+        } catch (Exception e) {
+            System.out.println("Error al guardar reserva en BD: " + e.getMessage());
+            return reserva;
+        }
     }
 
     /**
@@ -51,29 +83,21 @@ public class ReservaServicio {
      * @return Reserva creada
      */
     public Reserva crearReserva(int id, Cliente cliente, Date fechaVisita) {
+        actualizarContador();
+
         if (id > contadorReservas) {
             contadorReservas = id;
         }
-        Reserva reserva = new Reserva(id, cliente, fechaVisita);
-        reservas.add(reserva);
-        return reserva;
-    }
 
-    /**
-     * Actualiza el estado de una reserva basándose en el pago
-     * 
-     * @param reserva Reserva a actualizar
-     * @param pago    Pago asociado a la reserva
-     * @return Reserva actualizada
-     */
-    public Reserva actualizarEstadoReserva(Reserva reserva, Pago pago) {
-        if (pago.getEstado() == Pago.EstadoPago.CONFIRMADO) {
-            reserva.setEstado(Reserva.EstadoReserva.CONFIRMADA);
-        } else if (pago.getEstado() == Pago.EstadoPago.CANCELADO) {
-            reserva.setEstado(Reserva.EstadoReserva.CANCELADA);
+        Reserva reserva = new Reserva(id, cliente, fechaVisita);
+
+        try {
+            // Guardar en la base de datos
+            return reservaDAO.guardar(reserva);
+        } catch (Exception e) {
+            System.out.println("Error al guardar reserva en BD: " + e.getMessage());
+            return reserva;
         }
-        reserva.setPago(pago);
-        return reserva;
     }
 
     /**
@@ -98,7 +122,13 @@ public class ReservaServicio {
      * @return Lista de reservas
      */
     public List<Reserva> obtenerTodasLasReservas() {
-        return this.reservas;
+        try {
+            // Obtener de la base de datos
+            return reservaDAO.buscarTodas();
+        } catch (Exception e) {
+            System.out.println("Error al obtener reservas de BD: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -108,12 +138,13 @@ public class ReservaServicio {
      * @return Reserva encontrada o null si no existe
      */
     public Reserva buscarReservaPorId(int id) {
-        for (Reserva reserva : reservas) {
-            if (reserva.getId() == id) {
-                return reserva;
-            }
+        try {
+            // Buscar en la base de datos
+            return reservaDAO.buscarPorId(id);
+        } catch (Exception e) {
+            System.out.println("Error al buscar reserva en BD: " + e.getMessage());
+            return null;
         }
-        return null;
     }
 
     /**
@@ -123,13 +154,13 @@ public class ReservaServicio {
      * @return Lista de reservas del cliente
      */
     public List<Reserva> obtenerReservasPorCliente(Cliente cliente) {
-        List<Reserva> reservasCliente = new ArrayList<>();
-        for (Reserva reserva : reservas) {
-            if (reserva.getCliente().getId() == cliente.getId()) {
-                reservasCliente.add(reserva);
-            }
+        try {
+            // Obtener de la base de datos
+            return reservaDAO.buscarPorCliente(cliente.getId());
+        } catch (Exception e) {
+            System.out.println("Error al obtener reservas por cliente de BD: " + e.getMessage());
+            return new ArrayList<>();
         }
-        return reservasCliente;
     }
 
     /**
@@ -138,6 +169,24 @@ public class ReservaServicio {
      * @return true si hay reservas registradas, false en caso contrario
      */
     public boolean hayReservasRegistradas() {
+        List<Reserva> reservas = obtenerTodasLasReservas();
         return !reservas.isEmpty();
+    }
+
+    /**
+     * Actualiza una reserva existente en la base de datos
+     * Útil después de modificar una reserva (ej. añadir entradas o visitantes)
+     * 
+     * @param reserva Reserva a actualizar
+     * @return Reserva actualizada
+     */
+    public Reserva actualizarReserva(Reserva reserva) throws Exception {
+        try {
+            // Guardar en la base de datos
+            return reservaDAO.guardar(reserva);
+        } catch (Exception e) {
+            System.out.println("Error al actualizar reserva en BD: " + e.getMessage());
+            throw e; // Re-lanzar la excepción para que el controlador pueda manejarla
+        }
     }
 }

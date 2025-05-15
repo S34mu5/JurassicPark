@@ -26,28 +26,59 @@ public class ClienteDAOMySQL implements IClienteDAO {
 
     @Override
     public Cliente guardar(Cliente cliente) throws Exception {
-        String sql = "INSERT INTO cliente (id, nombre, apellido, email, telefono) VALUES (?, ?, ?, ?, ?)";
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet generatedKeys = null;
 
-        try (Connection conn = connectionJP.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try {
+            conn = connectionJP.getConnection();
 
-            stmt.setInt(1, cliente.getId());
-            stmt.setString(2, cliente.getNombre());
-            stmt.setString(3, cliente.getApellido());
-            stmt.setString(4, cliente.getEmail());
-            stmt.setString(5, cliente.getTelefono());
+            // INSERT nuevo (sin idcliente, ya que es AUTO_INCREMENT)
+            String insertSql = "INSERT INTO cliente (nombre, apellido, email, telefono) VALUES (?, ?, ?, ?)";
+            //Esto es clave. Le indico a JDBC que, tras ejecutar la instrucción, 
+            // me devuelva cualquier columna con valor generado automáticamente 
+            //(la clave primaria auto‐incremental que antes generaba desde Java y cuya creación delego ahora en MySQL).
+            stmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
 
-            int filasAfectadas = stmt.executeUpdate();
-            if (filasAfectadas > 0) {
-                return cliente;
+            stmt.setString(1, cliente.getNombre());
+            stmt.setString(2, cliente.getApellido());
+            stmt.setString(3, cliente.getEmail());
+            stmt.setString(4, cliente.getTelefono());
+
+            stmt.executeUpdate();
+
+            // Obtener el id generado por la BDD ya que es auto incremental
+            generatedKeys = stmt.getGeneratedKeys();
+            if (generatedKeys.next()) {
+                cliente.setId(generatedKeys.getInt(1));//Funciona porque la única generatedKey de cliente es un entero AI.
             }
-            throw new Exception("No se pudo guardar el cliente");
+
+            return cliente;
+        } finally {
+            if (generatedKeys != null) {
+                try {
+                    generatedKeys.close();
+                } catch (SQLException e) {
+                   }
+            }
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException e) {
+                    }
+            }
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    }
+            }
         }
     }
 
     @Override
     public Cliente buscarPorId(int id) throws Exception {
-        String sql = "SELECT * FROM cliente WHERE id = ?";
+        String sql = "SELECT * FROM cliente WHERE idcliente = ?";
 
         try (Connection conn = connectionJP.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -57,7 +88,7 @@ public class ClienteDAOMySQL implements IClienteDAO {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     Cliente cliente = new Cliente(
-                            rs.getInt("id"),
+                            rs.getInt("idcliente"),
                             rs.getString("nombre"),
                             rs.getString("apellido"),
                             rs.getString("email"),
@@ -80,7 +111,7 @@ public class ClienteDAOMySQL implements IClienteDAO {
 
             while (rs.next()) {
                 Cliente cliente = new Cliente(
-                        rs.getInt("id"),
+                        rs.getInt("idcliente"),
                         rs.getString("nombre"),
                         rs.getString("apellido"),
                         rs.getString("email"),

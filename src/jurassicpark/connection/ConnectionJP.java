@@ -26,15 +26,13 @@ public class ConnectionJP {
 
         // Parámetros de conexión
         String HOST = "localhost";
-        String PORT = "3306"; // Cambia esto si tu servidor MySQL usa otro puerto
-        String DATABASE = "jp_db"; // Nombre de tu base de datos
+        String PORT = "3310"; //
+        String DATABASE = "jp_db";
         String USER = "root";
         String PASSWORD = "root";
 
-        // URL de conexión a MySQL con parámetros necesarios para Docker
-        String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE;
+        String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DATABASE + "?useUnicode=true&characterEncoding=utf-8";
 
-        // Establecer conexión
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }

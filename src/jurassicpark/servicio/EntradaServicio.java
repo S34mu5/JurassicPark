@@ -1,8 +1,8 @@
 package jurassicpark.servicio;
 
+import jurassicpark.dao.IEntradaDAO;
+import jurassicpark.dao.EntradaDAOMySQL;
 import jurassicpark.modelo.gestion.Entrada;
-import jurassicpark.modelo.gestion.EntradaEstadisticas;
-import jurassicpark.modelo.gestion.Factura;
 import jurassicpark.modelo.gestion.Reserva;
 import jurassicpark.modelo.gestion.Visitante;
 
@@ -14,8 +14,37 @@ import java.util.List;
  */
 public class EntradaServicio {
 
+    // DAO para acceso a datos
+    private IEntradaDAO entradaDAO;
+
     // Contador para generar IDs automáticamente
     private static int contadorEntradas = 5000; // Empezamos desde 5000
+
+    /**
+     * Constructor de la clase EntradaServicio
+     */
+    public EntradaServicio() {
+        this.entradaDAO = new EntradaDAOMySQL();
+        actualizarContador();
+    }
+
+    /**
+     * Actualiza el contador de IDs
+     */
+    private void actualizarContador() {
+        try {
+            // Obtener todas las entradas y actualizar contador si es necesario
+            List<Entrada> entradas = entradaDAO.buscarTodas();
+            for (Entrada entrada : entradas) {
+                if (entrada.getId() > contadorEntradas) {
+                    contadorEntradas = entrada.getId();
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error al actualizar contador de entradas: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Genera entradas para una reserva
@@ -26,12 +55,22 @@ public class EntradaServicio {
      * @return Lista de entradas generadas
      */
     public List<Entrada> generarEntradas(Reserva reserva, int cantidad, double precioUnitario) {
+        actualizarContador();
+
         List<Entrada> entradas = new ArrayList<>();
         for (int i = 0; i < cantidad; i++) {
             int entradaId = ++contadorEntradas; // Incrementamos el contador y asignamos el nuevo ID
             Entrada entrada = new Entrada(entradaId, reserva, precioUnitario);
             reserva.agregarEntrada(entrada);
-            entradas.add(entrada);
+
+            try {
+                // Guardar en la base de datos
+                entradaDAO.guardar(entrada);
+                entradas.add(entrada);
+            } catch (Exception e) {
+                System.out.println("Error al guardar entrada en BD: " + e.getMessage());
+                // Seguimos intentando con las demás entradas
+            }
         }
         return entradas;
     }
@@ -47,6 +86,8 @@ public class EntradaServicio {
      * @return Lista de entradas generadas
      */
     public List<Entrada> generarEntradas(Reserva reserva, int cantidad, double precioUnitario, int idInicial) {
+        actualizarContador();
+
         List<Entrada> entradas = new ArrayList<>();
         for (int i = 0; i < cantidad; i++) {
             int entradaId = idInicial + i;
@@ -57,13 +98,21 @@ public class EntradaServicio {
 
             Entrada entrada = new Entrada(entradaId, reserva, precioUnitario);
             reserva.agregarEntrada(entrada);
-            entradas.add(entrada);
+
+            try {
+                // Guardar en la base de datos
+                entradaDAO.guardar(entrada);
+                entradas.add(entrada);
+            } catch (Exception e) {
+                System.out.println("Error al guardar entrada en BD: " + e.getMessage());
+                // Seguimos intentando con las demás entradas
+            }
         }
         return entradas;
     }
 
     /**
-     * Calcula el precio total de una lista de entradas
+     * Calcular el precio total de una lista de entradas
      * 
      * @param entradas Lista de entradas
      * @return Precio total
@@ -85,7 +134,15 @@ public class EntradaServicio {
     public boolean marcarEntradaComoUtilizada(Entrada entrada) {
         if (!entrada.isUtilizada()) {
             entrada.marcarComoUtilizada();
-            return true;
+
+            try {
+                // Actualizar en la base de datos
+                entradaDAO.guardar(entrada);
+                return true;
+            } catch (Exception e) {
+                System.out.println("Error al actualizar entrada en BD: " + e.getMessage());
+                return false;
+            }
         }
         return false;
     }
@@ -100,46 +157,45 @@ public class EntradaServicio {
     public void asignarVisitantes(Reserva reserva, List<Entrada> entradas, List<Visitante> visitantes) {
         int minSize = Math.min(entradas.size(), visitantes.size());
         for (int i = 0; i < minSize; i++) {
-            entradas.get(i).asignarVisitante(visitantes.get(i));
+            Entrada entrada = entradas.get(i);
+            entrada.asignarVisitante(visitantes.get(i));
+
+            try {
+                // Actualizar en la base de datos
+                entradaDAO.guardar(entrada);
+            } catch (Exception e) {
+                System.out.println("Error al actualizar entrada en BD: " + e.getMessage());
+                // Seguimos intentando con las demás entradas
+            }
         }
     }
 
     /**
-     * Genera estadísticas sobre las entradas
+     * Obtiene todas las entradas
      * 
-     * @param entradas Lista de entradas
-     * @param factura  Factura asociada
-     * @return Objeto con las estadísticas
+     * @return Lista de todas las entradas
      */
-    public EntradaEstadisticas generarEstadisticas(List<Entrada> entradas, Factura factura) {
-        EntradaEstadisticas estadisticas = new EntradaEstadisticas();
-
-        estadisticas.setTotalEntradas(entradas.size());
-
-        int entradasUtilizadas = 0;
-        int entradasAdultos = 0;
-        int entradasNinos = 0;
-
-        for (Entrada entrada : entradas) {
-            if (entrada.isUtilizada()) {
-                entradasUtilizadas++;
-            }
-
-            Visitante visitante = entrada.getVisitante();
-            if (visitante != null) {
-                if (visitante.getTipoVisitante().equals("NIÑO")) {
-                    entradasNinos++;
-                } else {
-                    entradasAdultos++;
-                }
-            }
+    public List<Entrada> obtenerTodasLasEntradas() {
+        try {
+            return entradaDAO.buscarTodas();
+        } catch (Exception e) {
+            System.out.println("Error al obtener entradas de BD: " + e.getMessage());
+            return new ArrayList<>();
         }
+    }
 
-        estadisticas.setEntradasUtilizadas(entradasUtilizadas);
-        estadisticas.setEntradasAdultos(entradasAdultos);
-        estadisticas.setEntradasNinos(entradasNinos);
-        estadisticas.setTotalFacturado(factura.getTotal());
-
-        return estadisticas;
+    /**
+     * Obtiene las entradas de una reserva
+     * 
+     * @param reserva Reserva de la que se quieren obtener las entradas
+     * @return Lista de entradas de la reserva
+     */
+    public List<Entrada> obtenerEntradasPorReserva(Reserva reserva) {
+        try {
+            return entradaDAO.buscarPorReserva(reserva.getId());
+        } catch (Exception e) {
+            System.out.println("Error al obtener entradas por reserva de BD: " + e.getMessage());
+            return new ArrayList<>();
+        }
     }
 }

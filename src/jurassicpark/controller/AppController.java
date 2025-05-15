@@ -1,7 +1,6 @@
 package jurassicpark.controller;
 
 import jurassicpark.modelo.gestion.*;
-import jurassicpark.modelo.dinosaurios.*;
 import jurassicpark.servicio.*;
 import jurassicpark.vista.ConsolaVista;
 import jurassicpark.util.MenuManager;
@@ -11,8 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
-import java.util.stream.Collectors;
-import java.text.SimpleDateFormat;
+
 
 /**
  * Controlador principal de la aplicación Gestiona la interacción entre los
@@ -24,8 +22,6 @@ public class AppController {
     private final ClienteServicio clienteServicio;
     private final ReservaServicio reservaServicio;
     private final EntradaServicio entradaServicio;
-    private final PagoServicio pagoServicio;
-    private final FacturaServicio facturaServicio;
     private final VisitanteServicio visitanteServicio;
 
     // Vista
@@ -39,8 +35,6 @@ public class AppController {
     private Reserva reservaActual;
     private List<Entrada> entradasActuales;
     private List<Visitante> visitantesActuales;
-    private Pago pagoActual;
-    private Factura facturaActual;
 
     // Scanner para entrada de datos
     private final Scanner scanner;
@@ -52,8 +46,6 @@ public class AppController {
         this.clienteServicio = new ClienteServicio();
         this.reservaServicio = new ReservaServicio();
         this.entradaServicio = new EntradaServicio();
-        this.pagoServicio = new PagoServicio();
-        this.facturaServicio = new FacturaServicio();
         this.visitanteServicio = new VisitanteServicio();
 
         this.vista = new ConsolaVista();
@@ -97,19 +89,11 @@ public class AppController {
                 case 3 ->
                     this.generarEntradas();
                 case 4 ->
-                    this.procesarPago();
-                case 5 ->
-                    this.confirmarPago();
-                case 6 ->
-                    this.generarFactura();
-                case 7 ->
                     this.crearVisitantes();
-                case 8 ->
+                case 5 ->
                     this.asignarVisitantesAEntradas();
-                case 9 ->
+                case 6 ->
                     this.marcarEntradasComoUtilizadas();
-                case 10 ->
-                    this.mostrarEstadisticas();
                 case 0 ->
                     this.vista.mostrarMensaje("¡Gracias por usar el sistema!");
                 default ->
@@ -243,183 +227,46 @@ public class AppController {
         }
 
         entradasActuales = entradaServicio.generarEntradas(reservaActual, cantidad, precio);
-        vista.mostrarMensaje("Se generaron " + cantidad + " entradas para la reserva #"
-                + reservaActual.getId() + " con precio unitario $" + precio);
+
+        // Guardar la reserva con las entradas en la base de datos
+        try {
+            reservaServicio.actualizarReserva(reservaActual);
+            vista.mostrarMensaje("Se generaron " + cantidad + " entradas para la reserva #"
+                    + reservaActual.getId() + " con precio unitario $" + precio);
+        } catch (Exception e) {
+            vista.mostrarError("Error al guardar las entradas: " + e.getMessage());
+        }
     }
 
     /**
-     * Opción 4: Procesar pago
-     */
-    private void procesarPago() {
-        menuManager.mostrarSubmenu("PROCESAR PAGO");
-
-        // Mostrar lista de reservas disponibles
-        List<Reserva> reservas = reservaServicio.obtenerTodasLasReservas();
-        if (reservas.isEmpty()) {
-            vista.mostrarError("No hay reservas registradas. Debe crear una primero.");
-            return;
-        }
-
-        vista.mostrarMensaje("\nReservas disponibles:");
-        for (Reserva reserva : reservas) {
-            vista.mostrarMensaje(reserva.getId() + ". Cliente: " + reserva.getCliente().getNombreCompleto()
-                    + ", Fecha: " + reserva.getFechaVisita() + ", Estado: " + reserva.getEstado());
-        }
-
-        // Seleccionar reserva
-        vista.mostrarMensaje("\nSeleccione el ID de la reserva: ");
-        String idStr = scanner.nextLine();
-        if (!InputValidator.esNumero(idStr)) {
-            vista.mostrarError("ID inválido. Debe ser un número.");
-            return;
-        }
-
-        int idReserva = Integer.parseInt(idStr);
-        reservaActual = reservaServicio.buscarReservaPorId(idReserva);
-        if (reservaActual == null) {
-            vista.mostrarError("Reserva no encontrada.");
-            return;
-        }
-
-        // Verificar que la reserva tenga entradas
-        if (reservaActual.getEntradas().isEmpty()) {
-            vista.mostrarError("La reserva no tiene entradas. Debe generar entradas primero.");
-            return;
-        }
-
-        // Calcular total y crear pago
-        double total = entradaServicio.calcularPrecioTotal(reservaActual.getEntradas());
-        pagoActual = pagoServicio.crearPago(reservaActual, total);
-        vista.mostrarMensaje("Pago procesado: $" + total);
-    }
-
-    /**
-     * Opción 5: Confirmar pago
-     */
-    private void confirmarPago() {
-        menuManager.mostrarSubmenu("CONFIRMAR PAGO");
-
-        // Mostrar lista de reservas con pagos pendientes
-        List<Reserva> reservas = reservaServicio.obtenerTodasLasReservas();
-        List<Reserva> reservasConPagoPendiente = new ArrayList<>();
-
-        // Filtrar reservas con pagos pendientes
-        for (Reserva reserva : reservas) {
-            if (reserva.getPago() != null && reserva.getPago().getEstado() == Pago.EstadoPago.PENDIENTE) {
-                reservasConPagoPendiente.add(reserva);
-            }
-        }
-
-        if (reservasConPagoPendiente.isEmpty()) {
-            vista.mostrarError("No hay pagos pendientes de confirmar.");
-            return;
-        }
-
-        vista.mostrarMensaje("\nPagos pendientes de confirmar:");
-        for (Reserva reserva : reservasConPagoPendiente) {
-            vista.mostrarMensaje(reserva.getId() + ". Cliente: " + reserva.getCliente().getNombreCompleto()
-                    + ", Total: $" + reserva.getPago().getTotal());
-        }
-
-        // Seleccionar reserva
-        vista.mostrarMensaje("\nSeleccione el ID de la reserva: ");
-        String idStr = scanner.nextLine();
-        if (!InputValidator.esNumero(idStr)) {
-            vista.mostrarError("ID inválido. Debe ser un número.");
-            return;
-        }
-
-        int idReserva = Integer.parseInt(idStr);
-        reservaActual = reservaServicio.buscarReservaPorId(idReserva);
-        if (reservaActual == null || reservaActual.getPago() == null
-                || reservaActual.getPago().getEstado() != Pago.EstadoPago.PENDIENTE) {
-            vista.mostrarError("Reserva no encontrada o pago no pendiente.");
-            return;
-        }
-
-        // Confirmar pago
-        pagoActual = pagoServicio.confirmarPago(reservaActual.getPago());
-        reservaActual = reservaServicio.actualizarEstadoReserva(reservaActual, pagoActual);
-        vista.mostrarMensaje("Pago confirmado y reserva actualizada");
-    }
-
-    /**
-     * Opción 6: Generar factura
-     */
-    private void generarFactura() {
-        menuManager.mostrarSubmenu("GENERAR FACTURA");
-
-        // Mostrar lista de reservas con pagos confirmados
-        List<Reserva> reservas = reservaServicio.obtenerTodasLasReservas();
-        List<Reserva> reservasConPagoConfirmado = new ArrayList<>();
-
-        // Filtrar reservas con pagos confirmados
-        for (Reserva reserva : reservas) {
-            if (reserva.getPago() != null && reserva.getPago().getEstado() == Pago.EstadoPago.CONFIRMADO) {
-                reservasConPagoConfirmado.add(reserva);
-            }
-        }
-
-        if (reservasConPagoConfirmado.isEmpty()) {
-            vista.mostrarError("No hay reservas con pagos confirmados para generar factura.");
-            return;
-        }
-
-        vista.mostrarMensaje("\nReservas con pagos confirmados:");
-        for (Reserva reserva : reservasConPagoConfirmado) {
-            vista.mostrarMensaje(reserva.getId() + ". Cliente: " + reserva.getCliente().getNombreCompleto()
-                    + ", Total: $" + reserva.getPago().getTotal());
-        }
-
-        // Seleccionar reserva
-        vista.mostrarMensaje("\nSeleccione el ID de la reserva: ");
-        String idStr = scanner.nextLine();
-        if (!InputValidator.esNumero(idStr)) {
-            vista.mostrarError("ID inválido. Debe ser un número.");
-            return;
-        }
-
-        int idReserva = Integer.parseInt(idStr);
-        reservaActual = reservaServicio.buscarReservaPorId(idReserva);
-        if (reservaActual == null || reservaActual.getPago() == null
-                || reservaActual.getPago().getEstado() != Pago.EstadoPago.CONFIRMADO) {
-            vista.mostrarError("Reserva no encontrada o pago no confirmado.");
-            return;
-        }
-
-        // Generar factura
-        facturaActual = facturaServicio.generarFactura(reservaActual, reservaActual.getPago().getTotal());
-        vista.mostrarMensaje("Factura generada: #" + facturaActual.getId());
-    }
-
-    /**
-     * Opción 7: Crear visitantes
+     * Opción 4: Crear visitantes
      */
     private void crearVisitantes() {
         menuManager.mostrarSubmenu("CREAR VISITANTES");
 
         // Obtener todas las reservas
         List<Reserva> todasLasReservas = reservaServicio.obtenerTodasLasReservas();
+
         List<Reserva> reservasDisponibles = new ArrayList<>();
 
-        // Filtrar reservas que tienen entradas sin visitantes
+        // Filtrar reservas donde NINGUNA entrada tiene visitante asignado
         for (Reserva reserva : todasLasReservas) {
             if (!reserva.getEntradas().isEmpty()) {
-                boolean tieneVisitantes = false;
+                boolean todasEntradasSinVisitantes = true;
                 for (Entrada entrada : reserva.getEntradas()) {
                     if (entrada.tieneVisitanteAsignado()) {
-                        tieneVisitantes = true;
+                        todasEntradasSinVisitantes = false;
                         break;
                     }
                 }
-                if (!tieneVisitantes) {
+                if (todasEntradasSinVisitantes) {
                     reservasDisponibles.add(reserva);
                 }
             }
         }
 
         if (reservasDisponibles.isEmpty()) {
-            vista.mostrarError("No hay reservas con entradas sin visitantes asignados.");
+            vista.mostrarError("No hay reservas con entradas disponibles para asignar visitantes.");
             return;
         }
 
@@ -445,16 +292,18 @@ public class AppController {
             return;
         }
 
-        // Verificar si ya tiene visitantes asignados
-        boolean tieneVisitantes = false;
-        for (Entrada entrada : reservaSeleccionada.getEntradas()) {
-            if (entrada.tieneVisitanteAsignado()) {
-                tieneVisitantes = true;
+        // Verificamos que la reserva seleccionada está en la lista de reservas
+        // disponibles
+        boolean reservaEsValida = false;
+        for (Reserva r : reservasDisponibles) {
+            if (r.getId() == reservaSeleccionada.getId()) {
+                reservaEsValida = true;
                 break;
             }
         }
-        if (tieneVisitantes) {
-            vista.mostrarError("Esta reserva ya tiene visitantes asignados.");
+
+        if (!reservaEsValida) {
+            vista.mostrarError("La reserva seleccionada no está disponible para asignar visitantes.");
             return;
         }
 
@@ -546,19 +395,27 @@ public class AppController {
             }
         }
 
-        // Asignar visitantes a las entradas. Lo comento
-        // entradaServicio.asignarVisitantes(reservaSeleccionada,
-        // reservaSeleccionada.getEntradas(), visitantes);
-        // vista.mostrarMensaje("\nSe han creado y asignado " + visitantes.size() + "
-        // visitantes a la reserva #"
-        // + reservaSeleccionada.getId());
+        // Asignar visitantes a las entradas
+        entradaServicio.asignarVisitantes(reservaSeleccionada,
+                reservaSeleccionada.getEntradas(),
+                visitantes);
+
+        // Actualizar la reserva en la base de datos
+        try {
+            reservaServicio.actualizarReserva(reservaSeleccionada);
+            vista.mostrarMensaje("\nSe han creado y asignado " + visitantes.size() + " visitantes a la reserva #"
+                    + reservaSeleccionada.getId());
+        } catch (Exception e) {
+            vista.mostrarError("Error al guardar la asignación de visitantes: " + e.getMessage());
+        }
+
         // Guardar los visitantes creados
         visitantesActuales = visitantes;
         vista.mostrarMensaje("Los visitantes han sido guardados para posibles asignaciones futuras.");
     }
 
     /**
-     * Opción 8: Asignar visitantes
+     * Opción 5: Asignar visitantes
      */
     private void asignarVisitantesAEntradas() {
         menuManager.mostrarSubmenu("ASIGNAR VISITANTES A ENTRADAS");
@@ -573,19 +430,17 @@ public class AppController {
         List<Reserva> reservas = reservaServicio.obtenerTodasLasReservas();
         List<Reserva> reservasConEntradasSinVisitantes = new ArrayList<>();
 
-        // Filtrar reservas con entradas sin visitantes
+        // Filtrar reservas donde NINGUNA entrada tiene visitante asignado
         for (Reserva reserva : reservas) {
             if (!reserva.getEntradas().isEmpty()) {
-                boolean tieneEntradasSinVisitantes = false;
-
+                boolean todasEntradasSinVisitantes = true;
                 for (Entrada entrada : reserva.getEntradas()) {
-                    if (!entrada.tieneVisitanteAsignado()) {
-                        tieneEntradasSinVisitantes = true;
+                    if (entrada.tieneVisitanteAsignado()) {
+                        todasEntradasSinVisitantes = false;
                         break;
                     }
                 }
-
-                if (tieneEntradasSinVisitantes) {
+                if (todasEntradasSinVisitantes) {
                     reservasConEntradasSinVisitantes.add(reserva);
                 }
             }
@@ -615,6 +470,21 @@ public class AppController {
         Reserva reservaSeleccionada = reservaServicio.buscarReservaPorId(idReserva);
         if (reservaSeleccionada == null) {
             vista.mostrarError("Reserva no encontrada.");
+            return;
+        }
+
+        // Verificamos que la reserva seleccionada está en la lista de reservas
+        // disponibles
+        boolean reservaEsValida = false;
+        for (Reserva r : reservasConEntradasSinVisitantes) {
+            if (r.getId() == reservaSeleccionada.getId()) {
+                reservaEsValida = true;
+                break;
+            }
+        }
+
+        if (!reservaEsValida) {
+            vista.mostrarError("La reserva seleccionada no está disponible para asignar visitantes.");
             return;
         }
 
@@ -696,7 +566,7 @@ public class AppController {
     }
 
     /**
-     * Opción 9: Marcar entradas utilizadas
+     * Opción 6: Marcar entradas utilizadas
      */
     private void marcarEntradasComoUtilizadas() {
         menuManager.mostrarSubmenu("MARCAR ENTRADAS COMO UTILIZADAS");
@@ -743,55 +613,5 @@ public class AppController {
             entradaServicio.marcarEntradaComoUtilizada(entrada);
         }
         vista.mostrarMensaje("Entradas marcadas como utilizadas");
-    }
-
-    /**
-     * Opción 10: Mostrar estadísticas
-     */
-    private void mostrarEstadisticas() {
-        menuManager.mostrarSubmenu("ESTADÍSTICAS");
-
-        // Mostrar lista de reservas con facturas
-        List<Reserva> reservas = reservaServicio.obtenerTodasLasReservas();
-        List<Reserva> reservasConFactura = new ArrayList<>();
-
-        // Filtrar las reservas que tienen factura
-        for (Reserva reserva : reservas) {
-            if (reserva.getPago() != null && reserva.getPago().getEstado() == Pago.EstadoPago.CONFIRMADO) {
-                reservasConFactura.add(reserva);
-            }
-        }
-
-        if (reservasConFactura.isEmpty()) {
-            vista.mostrarError("No hay reservas con facturas para mostrar estadísticas.");
-            return;
-        }
-
-        vista.mostrarMensaje("\nReservas con facturas:");
-        for (Reserva reserva : reservasConFactura) {
-            vista.mostrarMensaje(reserva.getId() + ". Cliente: " + reserva.getCliente().getNombreCompleto()
-                    + ", Total: $" + reserva.getPago().getTotal());
-        }
-
-        // Seleccionar reserva
-        vista.mostrarMensaje("\nSeleccione el ID de la reserva: ");
-        String idStr = scanner.nextLine();
-        if (!InputValidator.esNumero(idStr)) {
-            vista.mostrarError("ID inválido. Debe ser un número.");
-            return;
-        }
-
-        int idReserva = Integer.parseInt(idStr);
-        reservaActual = reservaServicio.buscarReservaPorId(idReserva);
-        if (reservaActual == null || reservaActual.getPago() == null
-                || reservaActual.getPago().getEstado() != Pago.EstadoPago.CONFIRMADO) {
-            vista.mostrarError("Reserva no encontrada o sin factura.");
-            return;
-        }
-
-        // Generar y mostrar estadísticas
-        EntradaEstadisticas estadisticas = entradaServicio.generarEstadisticas(reservaActual.getEntradas(),
-                facturaServicio.generarFactura(reservaActual, reservaActual.getPago().getTotal()));
-        vista.mostrarEstadisticas(estadisticas);
     }
 }

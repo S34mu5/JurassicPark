@@ -1,2 +1,0 @@
-package jurassicpark.modelo.dinosaurios;
- 

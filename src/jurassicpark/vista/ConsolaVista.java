@@ -1,6 +1,9 @@
 package jurassicpark.vista;
 
-import jurassicpark.modelo.gestion.*;
+import jurassicpark.modelo.gestion.Cliente;
+import jurassicpark.modelo.gestion.Entrada;
+import jurassicpark.modelo.gestion.Reserva;
+import jurassicpark.modelo.gestion.Visitante;
 
 import java.util.List;
 import java.util.Scanner;
@@ -129,62 +132,5 @@ public class ConsolaVista {
             System.out.println("Visitante: " + visitanteInfo);
             System.out.println("Utilizada: " + (entrada.isUtilizada() ? "Sí" : "No"));
         }
-    }
-
-    /**
-     * Muestra la información de un pago
-     * 
-     * @param pago Pago a mostrar
-     */
-    public void mostrarPago(Pago pago) {
-        System.out.println("\nINFORMACIÓN DEL PAGO");
-        System.out.println("ID: " + pago.getId());
-        System.out.println("Reserva: #" + pago.getReserva().getId());
-        System.out.println("Total: $" + pago.getTotal());
-        System.out.println("Estado: " + pago.getEstado());
-        if (pago.getFechaPago() != null) {
-            System.out.println("Fecha de pago: " + pago.getFechaPago());
-        }
-    }
-
-    /**
-     * Muestra la información de una factura
-     * 
-     * @param factura Factura a mostrar
-     */
-    public void mostrarFactura(Factura factura) {
-        System.out.println("\n" + factura.generarResumen());
-    }
-
-    /**
-     * Muestra las estadísticas de las entradas
-     * 
-     * @param estadisticas Estadísticas a mostrar
-     */
-    public void mostrarEstadisticas(EntradaEstadisticas estadisticas) {
-        System.out.println("\nESTADÍSTICAS");
-        System.out.println("Total de entradas: " + estadisticas.getTotalEntradas());
-        System.out.println("Entradas utilizadas: " + estadisticas.getEntradasUtilizadas() +
-                " (" + calcularPorcentaje(estadisticas.getEntradasUtilizadas(), estadisticas.getTotalEntradas())
-                + "%)");
-        System.out.println("Entradas de adultos: " + estadisticas.getEntradasAdultos() +
-                " (" + calcularPorcentaje(estadisticas.getEntradasAdultos(), estadisticas.getTotalEntradas()) + "%)");
-        System.out.println("Entradas de niños: " + estadisticas.getEntradasNinos() +
-                " (" + calcularPorcentaje(estadisticas.getEntradasNinos(), estadisticas.getTotalEntradas()) + "%)");
-        System.out.println("Total facturado: $" + estadisticas.getTotalFacturado());
-    }
-
-    /**
-     * Calcula el porcentaje de un valor sobre un total
-     * 
-     * @param valor Valor a calcular
-     * @param total Total
-     * @return Porcentaje
-     */
-    private double calcularPorcentaje(int valor, int total) {
-        if (total == 0) {
-            return 0;
-        }
-        return Math.round((double) valor / total * 100);
     }
 }
